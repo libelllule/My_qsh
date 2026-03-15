@@ -4,22 +4,29 @@ actor User as U
 participant "User Web UI" as UW
 participant "Server" as S
 participant "FileHandler" as FH
+participant "BD_Handler" as DB
 
 U -> UW: download file "filename"
 activate UW
+
 UW -> S: download_file("filename")
-deactivate UW
 activate S
+
 S -> FH: handle_download("filename")
-deactivate S
 activate FH
-FH -> S: path_to_file()
+FH --> S: file_data (stream)
 deactivate FH
-activate S
-S -> UW: file
+
+S -> DB: log_event(user_id, filename, 'd')
+activate DB
+DB --> S: ok
+deactivate DB
+
+S --> UW: file
 deactivate S
-activate UW
-UW -> U: dowload file
+
+UW -> U: save file
 deactivate UW
 @enduml
+
 ```
