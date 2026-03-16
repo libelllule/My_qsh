@@ -1,3 +1,4 @@
+```
 @startuml
 actor User as U
 participant "User Web UI" as UW
@@ -27,3 +28,4 @@ deactivate S
 UW -> U: show success message
 deactivate UW
 @enduml
+```

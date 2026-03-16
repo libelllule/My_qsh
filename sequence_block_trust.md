@@ -1,3 +1,4 @@
+```
 @startuml
 actor "Host" as H
 participant "Host Web UI" as HW
@@ -30,3 +31,4 @@ S --> HW: user_trusted_confirm
 deactivate S
 deactivate HW
 @enduml
+```
