@@ -1,6 +1,5 @@
 ```
 @startuml
-
 interface UI {
   + handle_request(req: Request): Response
   + render_static_page(page_name: &str): Response
@@ -141,11 +140,11 @@ srv -- ParamHandler
 srv -- FileHandler
 srv -- ClientUI
 srv -- ServerUI
+ClientUI -- FileHandler
+ServerUI -- FileHandler
 
 ClientUI ..|> UI
 ServerUI ..|> UI
 ParamHandler --> Config
-
-
 @enduml
 ```
