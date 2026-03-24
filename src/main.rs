@@ -3,14 +3,18 @@ use std::fmt;
 
 #[derive (Clone, Default, Debug)]
 
+/// Конфиг, в котором хранится информация о входной строчке
 pub struct Config {
+    /// Порт, в котором хранится число от 1 до 65535
     port: Option<u16>,
+    /// Аргумент помощи, если *true* - выводим информацию об аргументах
     help: Option<bool>,
+    /// Аргумент помощи, если *true* - записываем логи программы
     debug: Option<bool>,
 }
 
 #[derive(Debug)]
-
+/// Перечесление ошибок
 pub enum ParseError {
     MissingValue(String),
     InvalidValue(String, String),
@@ -18,8 +22,9 @@ pub enum ParseError {
     AlreadySpecified(String),
     UnexpectedArgument(String),
 }
-
+/// Добавляем метод для отображения ошибок
 impl fmt::Display for ParseError {
+    /// Отображение ошибок
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ParseError::MissingValue(opt) => write!(f, "Missing value for option: {}", opt),
@@ -31,24 +36,29 @@ impl fmt::Display for ParseError {
     }
 }
 
+/// Класс ParamHandler, который реализует валидацию аргументов в входной строчке
 pub struct ParamHandler {
     config: Config,
 }
 
 impl ParamHandler {
-
+    /// Создаем новый ParamHandler
     fn new() -> Self {
         ParamHandler {
             config: Config::default(),
         }
     }
+    /// Парсим аргументы из входно строки
+    /// Изменяем конфиг, если нашли флаг
+    /// params: &[String] - входная строка, разбытая на токены. Получается с помощью env::args().collect()
+    /// Возвращяем или конфиг (в случае, когда входная строчка валидны), или ошибка (в противном случае)
     pub fn parse_args(&mut self, params: &[String]) -> Result<Config, ParseError> {
-        let mut i = 1; // Skip the program name
+        let mut i = 1; // Пропускаем имя файла
 
         while i < params.len() {
             let arg = &params[i];
 
-            if arg.starts_with('-') {
+            if arg.starts_with('-') { // Каждый аргумент начинается с "-" 
                 match arg.as_str() {
                     "--port" | "-port" => {
                         if i + 1 >= params.len() {
@@ -57,6 +67,8 @@ impl ParamHandler {
                         self.parse_port(&params[i + 1])?;
                         i += 2;
                     }
+                    // Для булевых значений нам не важно, сколько раз повторялся аргумент.
+                    // Попробуй команду ls -l -l
                     "--help" | "-help" | "-h" => {
                         self.config.help = Some(true);
                         i += 1;
@@ -74,7 +86,8 @@ impl ParamHandler {
 
         Ok(self.config.clone())
     }
-
+    /// Метод, описывающий опработку порта
+    /// Т.к после порта всегда должно идти число
     fn parse_port(&mut self, p: &str) -> Result<(), ParseError> {
         if self.config.port.is_some() {
             return Err(ParseError::AlreadySpecified("--port".to_string()));
@@ -88,12 +101,14 @@ impl ParamHandler {
             Err(_) => Err(ParseError::InvalidValue("--port".to_string(), p.to_string())),
         }
     }
-
+    /// Возвращает неизменяемуб ссылку на конфиг
     pub fn get_config(&self) -> &Config {
         &self.config
     }
 }    
 
+// Все, что написано ниже, надо будет удалить
+/// Пример работы программы
 fn main() {
     let args: Vec<String> = env::args().collect();
     let mut handler = ParamHandler::new();
