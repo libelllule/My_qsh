@@ -4,3 +4,6 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+rcgen = "0.14"
+rustls = "0.21"
+rustls-pemfile = "1.0"
