@@ -1,4 +1,5 @@
-mod logger;
+use logger;
+use logger::{logger_info, logger_debug, logger_warn, logger_error};
 
 fn main() {
     logger::Logger::init_logs("debug"); 
