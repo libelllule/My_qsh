@@ -1,7 +1,7 @@
 use std::fs;
-mod Security;
+mod security;
 
-fn create_and_validate(s: &Security::Security) -> () {
+fn create_and_validate(s: &security::Security) -> () {
 
     //Генерация сертификата и ключа 
     match s.generate_certs() {
@@ -27,7 +27,7 @@ fn print_line() -> () {
 
 // Пример работы программы
 fn main() {
-    let s = Security::Security::new(Some("s".to_string()));
+    let s = security::Security::new(Some("s".to_string()));
     
     create_and_validate(&s);
     print_line();
