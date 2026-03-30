@@ -1,5 +1,5 @@
 use std::fs;
-mod security;
+use security;
 
 fn create_and_validate(s: &security::Security) -> () {
 

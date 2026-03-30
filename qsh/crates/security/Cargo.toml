@@ -7,3 +7,7 @@ edition = "2024"
 rcgen = "0.14"
 rustls = "0.21"
 rustls-pemfile = "1.0"
+
+[lib]
+name = "security"
+path = "src/lib.rs"
