@@ -1,9 +1,9 @@
 use std::env;
-mod ParamHandler;
+mod param_handler;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    let mut handler = ParamHandler::ParamHandler::new();
+    let mut handler = param_handler::ParamHandler::new();
 
     match handler.parse_args(&args) {
         Ok(config) => {
@@ -22,3 +22,4 @@ fn main() {
         }
     }
 }
+
