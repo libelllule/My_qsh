@@ -3,6 +3,13 @@
 version = 4
 
 [[package]]
+name = "app"
+version = "0.1.0"
+dependencies = [
+ "security",
+]
+
+[[package]]
 name = "asn1-rs"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -222,15 +229,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "parser"
-version = "0.1.0"
-dependencies = [
- "rcgen",
- "rustls",
- "rustls-pemfile",
-]
-
-[[package]]
 name = "pem"
 version = "3.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -349,6 +347,15 @@ checksum = "da046153aa2352493d6cb7da4b6e5c0c057d8a1d0a9aa8560baffdd945acd414"
 dependencies = [
  "ring",
  "untrusted",
+]
+
+[[package]]
+name = "security"
+version = "0.1.0"
+dependencies = [
+ "rcgen",
+ "rustls",
+ "rustls-pemfile",
 ]
 
 [[package]]
