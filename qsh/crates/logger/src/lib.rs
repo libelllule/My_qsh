@@ -1,4 +1,3 @@
-use std::time::Instant;
 use tracing::{debug, error, info, warn};
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::fmt;
@@ -16,7 +15,7 @@ impl Logger {
 
     pub fn init_logs(level: &str) {
         let filter = EnvFilter::try_new(level).unwrap_or_else(|_| EnvFilter::new("info"));
-        let timer = LocalTime::new(time::format_description::parse(TIME_FORMATTER).unwrap());
+        let timer = LocalTime::new(time::format_description::parse(TIME_FORMATTER).unwrap_or_default());
 
         tracing_subscriber::registry()
             .with(filter)
@@ -50,18 +49,6 @@ impl Logger {
         if tracing::level_enabled!(tracing::Level::ERROR) {
             error!("{}", args);
         }
-    }
-}
-
-pub struct TimerGuard {
-    label: &'static str,
-    start: Instant,
-}
-
-impl Drop for TimerGuard {
-    fn drop(&mut self) {
-        let dur = self.start.elapsed();
-        debug!("{} took {:?}", self.label, dur);
     }
 }
 
