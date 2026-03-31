@@ -1,5 +1,5 @@
 use std::env;
-mod param_handler;
+use param_handler;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
