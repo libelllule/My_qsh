@@ -1,0 +1,11 @@
+[package]
+name = "app"
+version = "1.0.0"
+edition = "2024"
+
+[dependencies]
+tokio = { version = "1.50.0", features = ["macros", "net", "rt-multi-thread"] }
+
+bdhandler = { path = "../crates/bdhandler" }
+user = { path = "../crates/user" }
+history = { path = "../crates/history" }

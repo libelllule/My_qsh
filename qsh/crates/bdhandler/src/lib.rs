@@ -2,8 +2,10 @@ use sqlx::{
     migrate::{MigrateDatabase, MigrateError}, sqlite::SqlitePoolOptions, Sqlite, SqlitePool,
     Row, sqlite::SqliteRow
 };
-use mac_address::MacAddress;
 use std::fmt::Display;
+
+use history::Note;
+use user::User;
 
 const STANDARD_DB_URL: &str = "QSH.db";
 const POOL_NOT_INITIALIZED_ERR: &str = "pool is not initialized; call initialize_db first";
@@ -19,41 +21,9 @@ const UPDATE_TEMPLATE: &str = "UPDATE {table} SET {values} WHERE {condition};";
 const VALUES_USER_TEMPLATE: &str = "mac_address = {mac_addr}, device_name = {dev_name}, nickname = {nick}, status = {status}";
 const VALUES_NOTE_TEMPLATE: &str = "user_id = {uid}, filename = {filename}, size = {size}, date = {date}, status = {status}";
 
-pub struct User {
-    pub id: u64,
-    pub mac_addr: MacAddress,
-    pub device_name: String,
-    pub nickname: String,
-    pub status: String,
-}
-
-pub struct Note {
-    pub id: u64,
-    pub user_id: u64,
-    pub filename: String,
-    pub size: String,
-    pub date: String,
-    pub status: String,
-}
-
 pub struct BDHandler {
     db_url: Option<String>,
     pool: Option<SqlitePool>,
-}
-
-impl User {
-    pub async fn to_string(&self) -> String {
-        format!("{}, {}, {}", self.mac_addr, self.device_name, self.nickname)
-    }
-}
-
-impl Note {
-    pub async fn to_string(&self) -> String {
-        format!(
-            "{}, {}, {}, {}, {}",
-            self.user_id, self.filename, self.size, self.date, self.status
-        )
-    }
 }
 
 impl BDHandler {
@@ -107,16 +77,7 @@ impl BDHandler {
         let device_name: String = row.get("device_name");
         let nickname: String = row.get("nickname");
         let status: String = row.get("status");
-        match mac.parse::<MacAddress>() {
-            Ok(mac_addr) => Some(User {
-                id,
-                mac_addr,
-                device_name,
-                nickname,
-                status,
-            }),
-            Err(_) => None,
-        }
+        User::constructor(id, mac, device_name, nickname, status)
     }
 
     async fn parse_items_to_values<T: Display>(&self, items: &[T]) -> String {
@@ -235,5 +196,11 @@ impl BDHandler {
 
     pub async fn get_all_notes(&self) -> Vec<Note> {
         self.fetch_all(SELECT_NOTES_TEMPLATE, BDHandler::row_to_note,).await
+    }
+
+    pub async fn close_pool(&mut self) {
+        if let Some(pool) = self.pool.take() {
+            pool.close().await;
+        }
     }
 }

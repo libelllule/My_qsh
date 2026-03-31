@@ -1,0 +1,11 @@
+[package]
+name = "bdhandler"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+sqlx = { version = "0.8.6", features = ["sqlite", "runtime-tokio-rustls"] }
+tokio = { version = "1.50.0", features = ["macros", "net", "rt-multi-thread"] }
+
+user = { path = "../user" }
+history = { path = "../history" }
