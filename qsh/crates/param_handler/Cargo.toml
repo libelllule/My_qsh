@@ -1,0 +1,8 @@
+[package]
+name = "param_handler"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "param_handler"
+path = "src/lib.rs"
