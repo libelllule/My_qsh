@@ -102,7 +102,7 @@ impl ParamHandler {
             Err(_) => Err(ParseError::InvalidValue("--port".to_string(), p.to_string())),
         }
     }
-    /// Возвращает неизменяемуб ссылку на конфиг
+    /// Возвращает неизменяемую ссылку на конфиг
     pub fn get_config(&self) -> &Config {
         &self.config
     }
