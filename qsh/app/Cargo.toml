@@ -5,3 +5,4 @@ edition = "2024"
 
 [dependencies]
 param_handler = { path = "../crates/param_handler/" }
+logger = { path = "../crates/logger" }
