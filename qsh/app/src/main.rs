@@ -1,5 +1,9 @@
+<<<<<<< qsh/app/src/main.rs
 use std::fs;
 use security;
+use logger;
+use logger::{logger_info, logger_debug, logger_warn, logger_error};
+
 
 fn create_and_validate(s: &security::Security) -> () {
 
@@ -66,4 +70,12 @@ fn main() {
         Err(e) => eprintln!("Error: {}", e),
     }
     print_line();
-}      
+
+    logger::Logger::init_logs("debug"); 
+    let qsh_logger = logger::Logger::new();
+    
+    logger_info!(qsh_logger, "this is info level and you can use formatter here {}", 5);
+    logger_debug!(qsh_logger, "this is debug level and you can use formatter here {}", 4);
+    logger_warn!(qsh_logger, "this is warn level and you can use formatter here {}", 3);
+    logger_error!(qsh_logger, "this is error level and you can use formatter here {}", 2);
+}
