@@ -6,4 +6,4 @@ edition = "2024"
 
 [dependencies]
 security = { path = "../crates/security/" }
-logger = { path = "../crates/logger" }
+
