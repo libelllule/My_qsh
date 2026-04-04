@@ -5,9 +5,7 @@ edition = "2024"
 
 [dependencies]
 rcgen = "0.14"
-rustls = "0.21"
-rustls-pemfile = "1.0"
-
+openssl = "0.10"
 [lib]
 name = "security"
 path = "src/lib.rs"
