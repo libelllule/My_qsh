@@ -14,19 +14,19 @@ impl User {
     }
 
     pub fn constructor(
-        id: u64,
-        mac: String,
-        device_name: String,
-        nickname: String,
-        status: String
+        id: &u64,
+        mac: &str,
+        device_name: &str,
+        nickname: &str,
+        status: &str
         ) -> Option<User> {
         match mac.parse::<MacAddress>() {
             Ok(mac_addr) => Some(User {
-                id,
+                id: *id,
                 mac_addr,
-                device_name,
-                nickname,
-                status,
+                device_name: device_name.to_string(),
+                nickname: nickname.to_string(),
+                status: status.to_string(),
             }),
             Err(_) => None,
         }

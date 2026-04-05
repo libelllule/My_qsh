@@ -2,8 +2,6 @@ use sqlx::{
     migrate::{MigrateDatabase, MigrateError}, sqlite::SqlitePoolOptions, Sqlite, SqlitePool,
     Row, sqlite::SqliteRow
 };
-use std::fmt::Display;
-
 use history::Note;
 use user::User;
 
@@ -12,14 +10,19 @@ const POOL_NOT_INITIALIZED_ERR: &str = "pool is not initialized; call initialize
 
 const SELECT_USERS_TEMPLATE: &str = "SELECT id, mac_address, device_name, nickname, status FROM users;";
 const SELECT_NOTES_TEMPLATE: &str = "SELECT id, user_id, filename, size, date, status FROM history";
-const INSERT_TEMPLATE: &str = "INSERT INTO {table} ({columns}) VALUES {values};";
+
+const INSERT_USER_QUERY: &str = "INSERT INTO users (mac_address, device_name, nickname, status) VALUES (?, ?, ?, ?)";
+const INSERT_NOTE_QUERY: &str = "INSERT INTO history (user_id, filename, size, date, status) VALUES (?, ?, ?, ?, ?)";
+
+const UPDATE_USER_QUERY: &str = "UPDATE users SET mac_address = ?, device_name = ?, nickname = ?, status = ? WHERE id = ?";
+const UPDATE_NOTE_QUERY: &str = "UPDATE history SET user_id = ?, filename = ?, size = ?, date = ?, status = ? WHERE id = ?";
+
+const DELETE_USER_BY_ID_QUERY: &str = "DELETE FROM users WHERE id = ?";
+const DELETE_NOTE_BY_ID_QUERY: &str = "DELETE FROM history WHERE id = ?";
+
 const VACUUM_TABLES: &str =
     "PRAGMA writable_schema = 1; DELETE FROM sqlite_master; PRAGMA writable_schema = 0; VACUUM; PRAGMA integrity_check;";
-
-const DELETE_TEMPLATE: &str = "DELETE FROM {table} WHERE {condition};";
-const UPDATE_TEMPLATE: &str = "UPDATE {table} SET {values} WHERE {condition};";
-const VALUES_USER_TEMPLATE: &str = "mac_address = {mac_addr}, device_name = {dev_name}, nickname = {nick}, status = {status}";
-const VALUES_NOTE_TEMPLATE: &str = "user_id = {uid}, filename = {filename}, size = {size}, date = {date}, status = {status}";
+const END_CHECKPOINT: &str = "PRAGMA wal_checkpoint(TRUNCATE)";
 
 pub struct BDHandler {
     db_url: Option<String>,
@@ -34,12 +37,9 @@ impl BDHandler {
             .expect(POOL_NOT_INITIALIZED_ERR) 
     }
 
-    async fn delete_from_table(&self, table: &str, condition: &str) -> Result<(), sqlx::Error> {
+    async fn delete_from_table_by_id(&self, query: &str, id: u64) -> Result<(), sqlx::Error> {
         let pool = self.check_pool().await;
-        let query = DELETE_TEMPLATE
-            .replace("{table}", table)
-            .replace("{condition}", condition);
-        sqlx::query(&query).execute(pool).await.map(|_| ())
+        sqlx::query(query).bind(id.to_string()).execute(pool).await.map(|_| ())
     }
 
     async fn fetch_all<T>(&self, query: &str, 
@@ -77,26 +77,46 @@ impl BDHandler {
         let device_name: String = row.get("device_name");
         let nickname: String = row.get("nickname");
         let status: String = row.get("status");
-        User::constructor(id, mac, device_name, nickname, status)
+        User::constructor(&id, &mac, &device_name, &nickname, &status)
     }
 
-    async fn parse_items_to_values<T: Display>(&self, items: &[T]) -> String {
-        let mut out = String::new();
-        let mut first = true;
-        for item in items {
-            if first {
-                first = false;
-            } else {
-                out.push_str(", ");
-            }
-            out.push('(');
-            out.push_str(&item.to_string());
-            out.push(')');
+    async fn insert_users_parameterized(&self, users: &[User]) -> Result<(), sqlx::Error> {
+        let pool = self.check_pool().await;
+        
+        let mut transaction = pool.begin().await?;
+        
+        for user in users {
+            sqlx::query(INSERT_USER_QUERY)
+                .bind(&user.mac_addr.to_string())
+                .bind(&user.device_name)
+                .bind(&user.nickname)
+                .bind(&user.status)
+                .execute(&mut *transaction)
+                .await?;
         }
-        if out.is_empty() {
-            out.push_str("()");
+        
+        transaction.commit().await?;
+        Ok(())
+    }
+
+    async fn insert_notes_parameterized(&self, notes: &[Note]) -> Result<(), sqlx::Error> {
+        let pool = self.check_pool().await;
+        
+        let mut transaction = pool.begin().await?;
+        
+        for note in notes {
+            sqlx::query(INSERT_NOTE_QUERY)
+                .bind(note.user_id.to_string())
+                .bind(&note.filename)
+                .bind(&note.size)
+                .bind(&note.date)
+                .bind(&note.status)
+                .execute(&mut *transaction)
+                .await?;
         }
-        out
+        
+        transaction.commit().await?;
+        Ok(())
     }
 
     pub async fn new() -> Self {
@@ -130,64 +150,47 @@ impl BDHandler {
         sqlx::query(VACUUM_TABLES).execute(pool).await.map(|_| ())
     }
 
-    pub async fn insert_users(&self, users: &[impl Display]) -> Result<(), sqlx::Error> {
-        let pool = self.check_pool().await;
-        let values = self.parse_items_to_values(users).await;
-        let query = INSERT_TEMPLATE
-            .replace("{table}", "users")
-            .replace(
-                "{columns}",
-                "mac_address, device_name, nickname, status",
-            )
-            .replace("{values}", &values);
-        sqlx::query(&query).execute(pool).await.map(|_| ())
+    pub async fn insert_users(&self, users: &[User]) -> Result<(), sqlx::Error> {
+        self.insert_users_parameterized(users).await
     }
 
-    pub async fn insert_note(&self, notes: &[impl Display]) -> Result<(), sqlx::Error> {
-        let pool = self.check_pool().await;
-        let values = self.parse_items_to_values(notes).await;
-        let query = INSERT_TEMPLATE
-            .replace("{table}", "history")
-            .replace("{columns}", "user_id, filename, size, date, status")
-            .replace("{values}", &values);
-        sqlx::query(&query).execute(pool).await.map(|_| ())
+    pub async fn insert_note(&self, notes: &[Note]) -> Result<(), sqlx::Error> {
+        self.insert_notes_parameterized(notes).await
     }
 
     pub async fn update_user(&self, prev_user: User, new_user: User) -> Result<(), sqlx::Error> {
         let pool = self.check_pool().await;
-        let query = UPDATE_TEMPLATE
-            .replace("{table}", "users")
-            .replace("{values}", VALUES_USER_TEMPLATE)
-            .replace("{mac_addr}", &new_user.mac_addr.to_string())
-            .replace("{dev_name}", &new_user.device_name)
-            .replace("{nick}", &new_user.nickname)
-            .replace("{status}", &new_user.status)
-            .replace("{condition}", "id = {id}")
-            .replace("{id}", &prev_user.id.to_string());
-        sqlx::query(&query).execute(pool).await.map(|_| ())
+        sqlx::query(UPDATE_USER_QUERY)
+            .bind(new_user.mac_addr.to_string())
+            .bind(new_user.device_name)
+            .bind(new_user.nickname)
+            .bind(new_user.status)
+            .bind(prev_user.id.to_string())
+            .execute(pool)
+            .await
+            .map(|_| ())
     }
 
     pub async fn update_note(&self, prev_note: Note, new_note: Note) -> Result<(), sqlx::Error> {
         let pool = self.check_pool().await;
-        let query = UPDATE_TEMPLATE
-            .replace("{table}", "history")
-            .replace("{values}", VALUES_NOTE_TEMPLATE)
-            .replace("{uid}", &new_note.user_id.to_string())
-            .replace("{filename}", &new_note.filename)
-            .replace("{size}", &new_note.size)
-            .replace("{date}", &new_note.date)
-            .replace("{status}", &new_note.status)
-            .replace("{condition}", "id = {id}")
-            .replace("{id}", &prev_note.id.to_string());
-        sqlx::query(&query).execute(pool).await.map(|_| ())
+        sqlx::query(UPDATE_NOTE_QUERY)
+            .bind(new_note.user_id.to_string())
+            .bind(new_note.filename)
+            .bind(new_note.size)
+            .bind(new_note.date)
+            .bind(new_note.status)
+            .bind(prev_note.id.to_string())
+            .execute(pool)
+            .await
+            .map(|_| ())
     }
 
-    pub async fn delete_users(&self, condition: &str) -> Result<(), sqlx::Error> {
-        self.delete_from_table("users", condition).await
+    pub async fn delete_user_by_id(&self, id: u64) -> Result<(), sqlx::Error> {
+        self.delete_from_table_by_id(DELETE_USER_BY_ID_QUERY, id).await
     }
 
-    pub async fn delete_notes(&self, condition: &str) -> Result<(), sqlx::Error> {
-        self.delete_from_table("history", condition).await
+    pub async fn delete_note_by_id(&self, id: u64) -> Result<(), sqlx::Error> {
+        self.delete_from_table_by_id(DELETE_NOTE_BY_ID_QUERY, id).await
     }
 
     pub async fn get_all_users(&self) -> Vec<User> {
@@ -200,6 +203,9 @@ impl BDHandler {
 
     pub async fn close_pool(&mut self) {
         if let Some(pool) = self.pool.take() {
+            let _ = sqlx::query(END_CHECKPOINT)
+                .execute(&pool)
+                .await;
             pool.close().await;
         }
     }
