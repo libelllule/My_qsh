@@ -4,6 +4,7 @@ use user;
 #[tokio::main]
 async fn main() {
     let mut bd = bdhandler::BDHandler::new().await;
+    let _ = bd.create_tables().await;
     match bd.initialize_db().await {
         Ok(_) => println!("Database initialized succesfully"),
         Err(err) => println!("Error while creating db: {}", err),
@@ -33,9 +34,13 @@ async fn main() {
         Ok(_) => println!("Users were added"),
         Err(err) => println!("Error while inserting users: {}", err),
     }
-    let new_users = bd.get_all_users().await;
-    for user in new_users {
-        println!("{}", user.to_string());
+    match bd.get_all_users().await {
+        Ok(new_users) => {
+            for user in new_users {
+                println!("{}", user.to_string());
+            }
+        },
+        Err(err) => eprintln!("Error while getting users: {}", err),
     }
     match bd.delete_user_by_id(0).await {
         Ok(_) => println!("User with id 0 deleted"),
