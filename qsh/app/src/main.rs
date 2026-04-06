@@ -3,7 +3,7 @@ use user;
 
 #[tokio::main]
 async fn main() {
-    let mut bd = bdhandler::BDHandler::new().await;
+    let mut bd = bdhandler::BDHandler::new();
     let _ = bd.create_tables().await;
     match bd.initialize_db().await {
         Ok(_) => println!("Database initialized succesfully"),

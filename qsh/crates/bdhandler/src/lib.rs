@@ -9,7 +9,7 @@ const STANDARD_DB_URL: &str = "QSH.db";
 const POOL_NOT_INITIALIZED_ERR: &str = "pool is not initialized; call initialize_db first";
 
 const SELECT_USERS_TEMPLATE: &str = "SELECT id, mac_address, device_name, nickname, status FROM users;";
-const SELECT_NOTES_TEMPLATE: &str = "SELECT id, user_id, filename, size, date, status FROM history";
+const SELECT_NOTES_TEMPLATE: &str = "SELECT id, user_id, filename, size, date, status FROM history;";
 
 const INSERT_USER_QUERY: &str = "INSERT INTO users (mac_address, device_name, nickname, status) VALUES (?, ?, ?, ?)";
 const INSERT_NOTE_QUERY: &str = "INSERT INTO history (user_id, filename, size, date, status) VALUES (?, ?, ?, ?, ?)";
@@ -43,7 +43,7 @@ pub struct BDHandler {
 }
 
 impl BDHandler {
-    async fn check_pool(&self) -> Result<&SqlitePool, PoolError> {
+    fn check_pool(&self) -> Result<&SqlitePool, PoolError> {
         if self.pool.is_none() {
             Err(PoolError{ message: POOL_NOT_INITIALIZED_ERR.to_string() })
         }
@@ -51,21 +51,21 @@ impl BDHandler {
             Ok(self
                 .pool
                 .as_ref()
-                .expect(POOL_NOT_INITIALIZED_ERR)
+                .unwrap()
             )
         }
     }
 
     async fn delete_from_table_by_id(&self, query: &str, id: u64) -> Result<(), sqlx::Error> {
-        match self.check_pool().await {
-        Ok(pool) => sqlx::query(query).bind(id.to_string()).execute(pool).await.map(|_| ()),
+        match self.check_pool() {
+        Ok(pool) => sqlx::query(query).bind(id as i64).execute(pool).await.map(|_| ()),
         Err(err) => Err(sqlx::Error::Protocol(format!("{:?}", err).into())),    
         }
     }
 
     async fn fetch_all<T>(&self, query: &str, 
         mapper: impl Fn(&SqliteRow) -> Option<T>) -> Result<Vec<T>, sqlx::Error> {
-        match self.check_pool().await {
+        match self.check_pool() {
             Ok(pool) => match sqlx::query(query).fetch_all(pool).await {
                 Ok(rows) => Ok(rows
                     .into_iter()
@@ -104,7 +104,7 @@ impl BDHandler {
     }
 
     async fn insert_users_parameterized(&self, users: &[User]) -> Result<(), sqlx::Error> {
-        match self.check_pool().await { 
+        match self.check_pool() { 
             Ok(pool) => {
                 let mut transaction = pool.begin().await?;
 
@@ -127,13 +127,13 @@ impl BDHandler {
     }
 
     async fn insert_notes_parameterized(&self, notes: &[Note]) -> Result<(), sqlx::Error> {
-        match self.check_pool().await {
+        match self.check_pool() {
             Ok(pool) => {
                 let mut transaction = pool.begin().await?;
 
                 for note in notes {
                     sqlx::query(INSERT_NOTE_QUERY)
-                        .bind(note.user_id.to_string())
+                        .bind(note.user_id as i64)
                         .bind(&note.filename)
                         .bind(&note.size)
                         .bind(&note.date)
@@ -149,7 +149,7 @@ impl BDHandler {
         }
     }
 
-    pub async fn new() -> Self {
+    pub fn new() -> Self {
         BDHandler {
             db_url: Some(STANDARD_DB_URL.to_string()),
             pool: None,
@@ -171,7 +171,7 @@ impl BDHandler {
     }
 
     pub async fn create_tables(&self) -> Result<(), MigrateError> {
-        match self.check_pool().await {
+        match self.check_pool() {
             Ok(pool) => Ok(sqlx::migrate!("./migrations").run(pool).await.map(|_| ())?),
             Err(err) => Err(sqlx::migrate::MigrateError::Execute(
                 sqlx::Error::Protocol(format!("{:?}", err).into())
@@ -180,7 +180,7 @@ impl BDHandler {
     }
 
     pub async fn clear_database(&self) -> Result<(), sqlx::Error> {
-        match self.check_pool().await {
+        match self.check_pool() {
         Ok(pool) => sqlx::query(VACUUM_TABLES).execute(pool).await.map(|_| ()),
         Err(err) => Err(sqlx::Error::Protocol(format!("{:?}", err).into())),
         }
@@ -195,14 +195,14 @@ impl BDHandler {
     }
 
     pub async fn update_user(&self, prev_user: User, new_user: User) -> Result<(), sqlx::Error> {
-        match self.check_pool().await {
+        match self.check_pool() {
             Ok(pool) => {
                 sqlx::query(UPDATE_USER_QUERY)
                     .bind(new_user.mac_addr.to_string())
                     .bind(new_user.device_name)
                     .bind(new_user.nickname)
                     .bind(new_user.status)
-                    .bind(prev_user.id.to_string())
+                    .bind(prev_user.id as i64)
                     .execute(pool)
                     .await
                     .map(|_| ())
@@ -212,15 +212,15 @@ impl BDHandler {
     }
 
     pub async fn update_note(&self, prev_note: Note, new_note: Note) -> Result<(), sqlx::Error> {
-        match self.check_pool().await {
+        match self.check_pool() {
         Ok(pool) => {
             sqlx::query(UPDATE_NOTE_QUERY)
-                .bind(new_note.user_id.to_string())
+                .bind(new_note.user_id as i64)
                 .bind(new_note.filename)
                 .bind(new_note.size)
                 .bind(new_note.date)
                 .bind(new_note.status)
-                .bind(prev_note.id.to_string())
+                .bind(prev_note.id as i64)
                 .execute(pool)
                 .await
                 .map(|_| ())
