@@ -1,6 +1,6 @@
 pub struct Note {
-    pub id: u64,
-    pub user_id: u64,
+    pub id: i64,
+    pub user_id: i64,
     pub filename: String,
     pub size: String,
     pub date: String,

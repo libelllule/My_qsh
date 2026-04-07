@@ -1,7 +1,7 @@
 use mac_address::MacAddress;
 
 pub struct User {
-    pub id: u64,
+    pub id: i64,
     pub mac_addr: MacAddress,
     pub device_name: String,
     pub nickname: String,
@@ -14,7 +14,7 @@ impl User {
     }
 
     pub fn constructor(
-        id: &u64,
+        id: &i64,
         mac: &str,
         device_name: &str,
         nickname: &str,

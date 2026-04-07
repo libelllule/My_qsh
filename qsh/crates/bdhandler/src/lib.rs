@@ -35,8 +35,6 @@ impl std::fmt::Display for PoolError {
     }
 }
 
-impl std::error::Error for PoolError {}
-
 pub struct BDHandler {
     db_url: Option<String>,
     pool: Option<SqlitePool>,
@@ -56,9 +54,9 @@ impl BDHandler {
         }
     }
 
-    async fn delete_from_table_by_id(&self, query: &str, id: u64) -> Result<(), sqlx::Error> {
+    async fn delete_from_table_by_id(&self, query: &str, id: i64) -> Result<(), sqlx::Error> {
         match self.check_pool() {
-        Ok(pool) => sqlx::query(query).bind(id as i64).execute(pool).await.map(|_| ()),
+        Ok(pool) => sqlx::query(query).bind(id).execute(pool).await.map(|_| ()),
         Err(err) => Err(sqlx::Error::Protocol(format!("{:?}", err).into())),    
         }
     }
@@ -78,8 +76,8 @@ impl BDHandler {
     }
 
     fn row_to_note(row: &SqliteRow) -> Option<Note> {
-        let id: u64 = row.get("id");
-        let user_id: u64 = row.get("user_id");
+        let id: i64 = row.get("id");
+        let user_id: i64 = row.get("user_id");
         let filename: String = row.get("filename");
         let size: String = row.get("size");
         let date: String = row.get("date");
@@ -95,11 +93,11 @@ impl BDHandler {
     }
 
     fn row_to_user(row: &SqliteRow) -> Option<User> {
-        let id: u64 = row.get("id");
-        let mac: String = row.get("mac_address");
-        let device_name: String = row.get("device_name");
-        let nickname: String = row.get("nickname");
-        let status: String = row.get("status");
+        let id: i64 = row.try_get("id").ok()?;
+        let mac: String = row.try_get("mac_address").ok()?;
+        let device_name: String = row.try_get("device_name").ok()?;
+        let nickname: String = row.try_get("nickname").ok()?;
+        let status: String = row.try_get("status").ok()?;
         User::constructor(&id, &mac, &device_name, &nickname, &status)
     }
 
@@ -133,7 +131,7 @@ impl BDHandler {
 
                 for note in notes {
                     sqlx::query(INSERT_NOTE_QUERY)
-                        .bind(note.user_id as i64)
+                        .bind(note.user_id)
                         .bind(&note.filename)
                         .bind(&note.size)
                         .bind(&note.date)
@@ -202,7 +200,7 @@ impl BDHandler {
                     .bind(new_user.device_name)
                     .bind(new_user.nickname)
                     .bind(new_user.status)
-                    .bind(prev_user.id as i64)
+                    .bind(prev_user.id)
                     .execute(pool)
                     .await
                     .map(|_| ())
@@ -215,12 +213,12 @@ impl BDHandler {
         match self.check_pool() {
         Ok(pool) => {
             sqlx::query(UPDATE_NOTE_QUERY)
-                .bind(new_note.user_id as i64)
+                .bind(new_note.user_id)
                 .bind(new_note.filename)
                 .bind(new_note.size)
                 .bind(new_note.date)
                 .bind(new_note.status)
-                .bind(prev_note.id as i64)
+                .bind(prev_note.id)
                 .execute(pool)
                 .await
                 .map(|_| ())
@@ -229,11 +227,11 @@ impl BDHandler {
         }
     }
 
-    pub async fn delete_user_by_id(&self, id: u64) -> Result<(), sqlx::Error> {
+    pub async fn delete_user_by_id(&self, id: i64) -> Result<(), sqlx::Error> {
         self.delete_from_table_by_id(DELETE_USER_BY_ID_QUERY, id).await
     }
 
-    pub async fn delete_note_by_id(&self, id: u64) -> Result<(), sqlx::Error> {
+    pub async fn delete_note_by_id(&self, id: i64) -> Result<(), sqlx::Error> {
         self.delete_from_table_by_id(DELETE_NOTE_BY_ID_QUERY, id).await
     }
 
