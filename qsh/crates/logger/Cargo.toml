@@ -12,3 +12,4 @@ tracing-subscriber = { version = "0.3.22", features = ["env-filter", "fmt", "loc
 [lib]
 name = "logger"
 path = "src/lib.rs"
+
