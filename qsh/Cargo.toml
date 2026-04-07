@@ -1,3 +1,3 @@
 [workspace]
-members = ["app", "crates/bdhandler", "crates/user", "crates/history"]
+members = ["app", "crates/bdhandler", "crates/user", "crates/history", "crates/param_handler"]
 resolver = "3"

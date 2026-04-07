@@ -9,3 +9,6 @@ tokio = { version = "1.50.0", features = ["macros", "net", "rt-multi-thread"] }
 bdhandler = { path = "../crates/bdhandler" }
 user = { path = "../crates/user" }
 history = { path = "../crates/history" }
+param_handler = { path = "../crates/param_handler/" }
+logger = { path = "../crates/logger" }
+security = { path = "../crates/security/" }
