@@ -33,7 +33,8 @@ fn print_line() -> () {
 }
 
 // Пример работы программы
-fn main() {
+#[tokio::main]
+async fn main() {
     // Security section
     let s = security::Security::new(Some("s".to_string()));
     

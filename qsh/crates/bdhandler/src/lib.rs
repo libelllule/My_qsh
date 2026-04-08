@@ -154,6 +154,10 @@ impl BDHandler {
         }
     }
 
+    pub fn set_db_url(&mut self, url: &str) {
+        self.db_url = Some(url.to_string());
+    }
+
     pub async fn initialize_db(&mut self) -> Result<(), sqlx::Error> {
         let db_url = self.db_url.as_deref().unwrap_or(STANDARD_DB_URL);
 
